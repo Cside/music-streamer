@@ -4,15 +4,14 @@ use Enigma;
 use JSON;
 use Encode;
 use URI;
-use LWP::Simple qw();
 use Devel::KYTProf;
-use Furl;
+use LWP::UserAgent;
 
-my $UA = Furl->new;
 my %DEFAULT_QUERIES = (
     country => 'JP',
     lang    => 'ja_JP',
 );
+my $UA = LWP::UserAgent->new(timeout => 5);
 
 get '/artists' => sub {
     my ($c) = @_;
@@ -28,6 +27,10 @@ get '/artists' => sub {
         term   => $params->{term},
     );
 
+    my @results = eval { _fetch($uri->as_string) };
+    if ($@) {
+        return $c->render_json_with_code(500);
+    }
     return $c->render_json([
         map {
             +{
@@ -36,7 +39,7 @@ get '/artists' => sub {
                 linkUrl => $_->{artistLinkUrl},
             };
         }
-        _fetch_json($uri->as_string)
+        @results,
     ]);
 };
 
@@ -55,6 +58,10 @@ get '/artists/{id}/songs' => sub {
         id          => $params->{id},
     );
 
+    my @results = eval { _fetch($uri->as_string) };
+    if ($@) {
+        return $c->render_json_with_code(500);
+    }
     return $c->render_json([
         map { 
             +{
@@ -70,17 +77,14 @@ get '/artists/{id}/songs' => sub {
             };
         }
         grep { $_->{wrapperType} eq 'track' }
-        _fetch_json($uri->as_string)
+        @results
     ]);
 };
 
-sub _fetch_json {
+sub _fetch {
     my $url = shift;
-    say $url;
-    my $json = LWP::Simple::get($url);
-    say $json;
+    my $json = $UA->get($url)->decoded_content;
     $json = encode_utf8 $json;
-    say $json;
 
     return @{
         decode_json($json)->{results}

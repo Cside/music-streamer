@@ -1,6 +1,6 @@
 requires 'Devel::KYTProf';
 requires 'Encode';
-requires 'Enigma';
+requires 'git@github.com:Cside/Enigma.git';
 requires 'Furl';
 requires 'JSON';
 requires 'LWP::Simple';
